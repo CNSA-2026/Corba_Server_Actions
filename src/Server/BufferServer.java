@@ -14,6 +14,7 @@ public class BufferServer {
             ORB orb = ORB.init(args, null); // Crea e inicializa el ORB
             // Crea un hilo (servant) y lo registra en el ORB
             BufferImpl bufferRef = new BufferImpl();
+            bufferRef.setORB(orb);
             orb.connect(bufferRef);
             // Obtiene una referencia del objeto
             org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");

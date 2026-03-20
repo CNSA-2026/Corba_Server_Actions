@@ -24,7 +24,8 @@ public abstract class _BufferImplBase extends org.omg.CORBA.portable.ObjectImpl
     _methods.put ("put", new java.lang.Integer (1));
     _methods.put ("get", new java.lang.Integer (2));
     _methods.put ("read", new java.lang.Integer (3));
-    _methods.put ("shutdown", new java.lang.Integer (4));
+    _methods.put ("fijarLimiteNoticias", new java.lang.Integer (4));
+    _methods.put ("shutdown", new java.lang.Integer (5));
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,
@@ -49,9 +50,9 @@ public abstract class _BufferImplBase extends org.omg.CORBA.portable.ObjectImpl
 
        case 1:  // BufferApp/Buffer/put
        {
-         String elemento = in.read_string ();
+         BufferApp.Noticia noticia = BufferApp.NoticiaHelper.read (in);
          boolean $result = false;
-         $result = this.put (elemento);
+         $result = this.put (noticia);
          out = $rh.createReply();
          out.write_boolean ($result);
          break;
@@ -59,27 +60,35 @@ public abstract class _BufferImplBase extends org.omg.CORBA.portable.ObjectImpl
 
        case 2:  // BufferApp/Buffer/get
        {
-         org.omg.CORBA.StringHolder elemento = new org.omg.CORBA.StringHolder ();
+         BufferApp.NoticiaHolder noticia = new BufferApp.NoticiaHolder ();
          boolean $result = false;
-         $result = this.get (elemento);
+         $result = this.get (noticia);
          out = $rh.createReply();
          out.write_boolean ($result);
-         out.write_string (elemento.value);
+         BufferApp.NoticiaHelper.write (out, noticia.value);
          break;
        }
 
        case 3:  // BufferApp/Buffer/read
        {
-         org.omg.CORBA.StringHolder elemento = new org.omg.CORBA.StringHolder ();
+         BufferApp.NoticiaHolder noticia = new BufferApp.NoticiaHolder ();
          boolean $result = false;
-         $result = this.read (elemento);
+         $result = this.read (noticia);
          out = $rh.createReply();
          out.write_boolean ($result);
-         out.write_string (elemento.value);
+         BufferApp.NoticiaHelper.write (out, noticia.value);
          break;
        }
 
-       case 4:  // BufferApp/Buffer/shutdown
+       case 4:  // BufferApp/Buffer/fijarLimiteNoticias
+       {
+         int numero_maximo = in.read_long ();
+         this.fijarLimiteNoticias (numero_maximo);
+         out = $rh.createReply();
+         break;
+       }
+
+       case 5:  // BufferApp/Buffer/shutdown
        {
          this.shutdown ();
          out = $rh.createReply();

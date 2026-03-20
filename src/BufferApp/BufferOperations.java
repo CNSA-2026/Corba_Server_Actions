@@ -22,26 +22,33 @@ public interface BufferOperations
   /**
    * Introduce elemento en la cola
    *
-   * @param elemento the elemento
+    * @param noticia la noticia a insertar
    * @return true, if successful
    */
-  boolean put (String elemento);
+    boolean put (BufferApp.Noticia noticia);
   
   /**
    * Saca el primer elemento de la cola
    *
-   * @param elemento the elemento
+    * @param noticia la noticia
    * @return true, if successful
    */
-  boolean get (org.omg.CORBA.StringHolder elemento);
+    boolean get (BufferApp.NoticiaHolder noticia);
   
   /**
    * Lee el primer elemento de la cola
    *
-   * @param elemento the elemento
+    * @param noticia la noticia
    * @return true, if successful
    */
-  boolean read (org.omg.CORBA.StringHolder elemento);
+    boolean read (BufferApp.NoticiaHolder noticia);
+
+    /**
+    * Fija el limite maximo de noticias permitido en el buffer.
+    *
+    * @param numero_maximo nuevo limite maximo
+    */
+    void fijarLimiteNoticias (int numero_maximo);
   
   /**
    * Apaga el servidor Corba

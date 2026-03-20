@@ -30,12 +30,12 @@ public class _BufferStub extends org.omg.CORBA.portable.ObjectImpl implements Bu
             }
   } // num_elementos
 
-  public boolean put (String elemento)
+    public boolean put (BufferApp.Noticia noticia)
   {
             org.omg.CORBA.portable.InputStream $in = null;
             try {
                 org.omg.CORBA.portable.OutputStream $out = _request ("put", true);
-                $out.write_string (elemento);
+                                BufferApp.NoticiaHelper.write ($out, noticia);
                 $in = _invoke ($out);
                 boolean $result = $in.read_boolean ();
                 return $result;
@@ -44,51 +44,70 @@ public class _BufferStub extends org.omg.CORBA.portable.ObjectImpl implements Bu
                 String _id = $ex.getId ();
                 throw new org.omg.CORBA.MARSHAL (_id);
             } catch (org.omg.CORBA.portable.RemarshalException $rm) {
-                return put (elemento        );
+                return put (noticia        );
             } finally {
                 _releaseReply ($in);
             }
   } // put
 
-  public boolean get (org.omg.CORBA.StringHolder elemento)
+  public boolean get (BufferApp.NoticiaHolder noticia)
   {
             org.omg.CORBA.portable.InputStream $in = null;
             try {
                 org.omg.CORBA.portable.OutputStream $out = _request ("get", true);
                 $in = _invoke ($out);
                 boolean $result = $in.read_boolean ();
-                elemento.value = $in.read_string ();
+                noticia.value = BufferApp.NoticiaHelper.read ($in);
                 return $result;
             } catch (org.omg.CORBA.portable.ApplicationException $ex) {
                 $in = $ex.getInputStream ();
                 String _id = $ex.getId ();
                 throw new org.omg.CORBA.MARSHAL (_id);
             } catch (org.omg.CORBA.portable.RemarshalException $rm) {
-                return get (elemento        );
+                return get (noticia        );
             } finally {
                 _releaseReply ($in);
             }
   } // get
 
-  public boolean read (org.omg.CORBA.StringHolder elemento)
+  public boolean read (BufferApp.NoticiaHolder noticia)
   {
             org.omg.CORBA.portable.InputStream $in = null;
             try {
                 org.omg.CORBA.portable.OutputStream $out = _request ("read", true);
                 $in = _invoke ($out);
                 boolean $result = $in.read_boolean ();
-                elemento.value = $in.read_string ();
+                noticia.value = BufferApp.NoticiaHelper.read ($in);
                 return $result;
             } catch (org.omg.CORBA.portable.ApplicationException $ex) {
                 $in = $ex.getInputStream ();
                 String _id = $ex.getId ();
                 throw new org.omg.CORBA.MARSHAL (_id);
             } catch (org.omg.CORBA.portable.RemarshalException $rm) {
-                return read (elemento        );
+                return read (noticia        );
             } finally {
                 _releaseReply ($in);
             }
   } // read
+
+  public void fijarLimiteNoticias (int numero_maximo)
+  {
+            org.omg.CORBA.portable.InputStream $in = null;
+            try {
+                org.omg.CORBA.portable.OutputStream $out = _request ("fijarLimiteNoticias", true);
+                $out.write_long (numero_maximo);
+                $in = _invoke ($out);
+                return;
+            } catch (org.omg.CORBA.portable.ApplicationException $ex) {
+                $in = $ex.getInputStream ();
+                String _id = $ex.getId ();
+                throw new org.omg.CORBA.MARSHAL (_id);
+            } catch (org.omg.CORBA.portable.RemarshalException $rm) {
+                fijarLimiteNoticias (numero_maximo        );
+            } finally {
+                _releaseReply ($in);
+            }
+  } // fijarLimiteNoticias
 
   public void shutdown ()
   {
