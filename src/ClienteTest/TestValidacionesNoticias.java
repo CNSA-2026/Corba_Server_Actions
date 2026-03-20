@@ -34,6 +34,9 @@ public class TestValidacionesNoticias {
 			assertCaso(buffer, "Descripcion corta", noticia("25/12/2025", "media", "Titulo correcto", "muy corta", new String[]{"#ok"}), false);
 			assertCaso(buffer, "Etiqueta invalida", noticia("25/12/2025", "baja", "Titulo correcto", "Descripcion suficientemente larga para cumplir la restriccion minima.", new String[]{"etiquetaSinHash"}), false);
 			assertCaso(buffer, "Demasiadas etiquetas", noticia("25/12/2025", "baja", "Titulo correcto", "Descripcion suficientemente larga para cumplir la restriccion minima.", new String[]{"#a", "#b", "#c", "#d", "#e", "#f", "#g"}), false);
+			assertCaso(buffer, "Interes con espacios y mayusculas", noticia("25/12/2025", "  ALTA  ", "Titulo correcto", "Descripcion suficientemente larga para cumplir la restriccion minima.", new String[]{"#ok"}), true);
+			assertCaso(buffer, "Titulo con espacios no contados", noticia("25/12/2025", "media", "   Titulo      con      espacios   ", "Descripcion suficientemente larga para cumplir la restriccion minima.", new String[]{"#ok"}), true);
+			assertCaso(buffer, "Etiqueta con espacios alrededor", noticia("25/12/2025", "baja", "Titulo correcto", "Descripcion suficientemente larga para cumplir la restriccion minima.", new String[]{"   #etiqueta   "}), true);
 		} catch (Exception e) {
 			System.out.println("ERROR en test de validaciones: " + e);
 			e.printStackTrace(System.out);

@@ -130,11 +130,15 @@ class BufferImpl extends _BufferImplBase {
 	}
 
 	private boolean esFechaValida(String fecha) {
-		return fecha != null && FECHA_PATTERN.matcher(fecha).matches();
+		return fecha != null && FECHA_PATTERN.matcher(fecha.trim()).matches();
 	}
 
 	private boolean esInteresValido(String interes) {
-		return "alta".equals(interes) || "media".equals(interes) || "baja".equals(interes);
+		if (interes == null) {
+			return false;
+		}
+		String normalized = interes.trim().toLowerCase();
+		return "alta".equals(normalized) || "media".equals(normalized) || "baja".equals(normalized);
 	}
 
 	private boolean longitudNoBlancosEnRango(String texto, int min, int max) {
@@ -151,7 +155,7 @@ class BufferImpl extends _BufferImplBase {
 			return false;
 		}
 		for (int i = 0; i < etiquetas.length; i++) {
-			if (etiquetas[i] == null || !ETIQUETA_PATTERN.matcher(etiquetas[i]).matches()) {
+			if (etiquetas[i] == null || !ETIQUETA_PATTERN.matcher(etiquetas[i].trim()).matches()) {
 				return false;
 			}
 		}
