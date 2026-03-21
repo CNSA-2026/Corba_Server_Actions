@@ -1,20 +1,10 @@
 module BufferApp {
-     typedef sequence<string> Etiquetas;
-
-     struct Noticia {
-         string fecha;
-         string interes;
-         string titulo;
-         string descripcion;
-         Etiquetas etiquetas;
-     };
-
     interface Buffer {
        long num_elementos();
-         boolean put(in Noticia noticia);
-         boolean get(out Noticia noticia);
-         boolean read(out Noticia noticia);
-         void fijarLimiteNoticias(in long numero_maximo);
+         boolean put(in string elemento);
+         boolean get(out string elemento);
+         boolean read(out string elemento);
+         boolean fijarLimiteNoticias(in long numero_maximo);
        oneway void shutdown();
     };
 };

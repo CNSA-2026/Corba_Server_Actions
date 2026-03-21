@@ -9,15 +9,14 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.omg.CORBA.StringHolder;
 
 import BufferApp.BufferOperations;
-import BufferApp.Noticia;
-import BufferApp.NoticiaHolder;
 
 public class BufferUnitTest {
 
 	private static class FakeBuffer implements BufferOperations {
-		private final List<Noticia> datos = new ArrayList<Noticia>();
+		private final List<String> datos = new ArrayList<String>();
 		private int limite = 2;
 		private boolean apagado;
 
@@ -27,43 +26,44 @@ public class BufferUnitTest {
 		}
 
 		@Override
-		public synchronized boolean put(Noticia noticia) {
-			if (noticia == null || datos.size() >= limite) {
+		public synchronized boolean put(String elemento) {
+			if (elemento == null || elemento.trim().isEmpty() || datos.size() >= limite) {
 				return false;
 			}
-			datos.add(copiar(noticia));
+			datos.add(elemento);
 			return true;
 		}
 
 		@Override
-		public synchronized boolean get(NoticiaHolder noticia) {
+		public synchronized boolean get(StringHolder elemento) {
 			if (datos.isEmpty()) {
-				noticia.value = vacia();
+				elemento.value = "";
 				return false;
 			}
-			noticia.value = copiar(datos.remove(0));
+			elemento.value = datos.remove(0);
 			return true;
 		}
 
 		@Override
-		public synchronized boolean read(NoticiaHolder noticia) {
+		public synchronized boolean read(StringHolder elemento) {
 			if (datos.isEmpty()) {
-				noticia.value = vacia();
+				elemento.value = "";
 				return false;
 			}
-			noticia.value = copiar(datos.get(0));
+			elemento.value = datos.get(0);
 			return true;
 		}
 
 		@Override
-		public synchronized void fijarLimiteNoticias(int numero_maximo) {
-			if (numero_maximo < 0) {
-				numero_maximo = 0;
+		public synchronized boolean fijarLimiteNoticias(int numero_maximo) {
+			if (numero_maximo <= 0) {
+				return false;
 			}
 			limite = numero_maximo;
 			while (datos.size() > limite) {
 				datos.remove(datos.size() - 1);
 			}
+			return true;
 		}
 
 		@Override
@@ -74,29 +74,19 @@ public class BufferUnitTest {
 		public boolean isApagado() {
 			return apagado;
 		}
-
-		private Noticia copiar(Noticia n) {
-			String[] etiquetas = n.etiquetas == null ? new String[0] : n.etiquetas.clone();
-			return new Noticia(n.fecha, n.interes, n.titulo, n.descripcion, etiquetas);
-		}
-
-		private Noticia vacia() {
-			return new Noticia("", "", "", "", new String[0]);
-		}
 	}
 
 	private FakeBuffer buffer;
-	private NoticiaHolder holder;
+	private StringHolder holder;
 
 	@BeforeEach
 	public void setUp() {
 		buffer = new FakeBuffer();
-		holder = new NoticiaHolder();
+		holder = new StringHolder();
 	}
 
-	private Noticia noticia(String titulo, String etiqueta) {
-		return new Noticia("20/03/2026", "media", titulo,
-				"Descripcion valida para pruebas unitarias del buffer.", new String[] { etiqueta });
+	private String noticia(String titulo, String etiqueta) {
+		return "<noticia><titulo>" + titulo + "</titulo><etiqueta>" + etiqueta + "</etiqueta></noticia>";
 	}
 
 	@Test
@@ -113,30 +103,30 @@ public class BufferUnitTest {
 		buffer.put(noticia("n2", "#dos"));
 
 		assertTrue(buffer.read(holder));
-		assertEquals("n1", holder.value.titulo);
+		assertTrue(holder.value.contains("<titulo>n1</titulo>"));
 		assertEquals(2, buffer.num_elementos());
 
 		assertTrue(buffer.get(holder));
-		assertEquals("n1", holder.value.titulo);
+		assertTrue(holder.value.contains("<titulo>n1</titulo>"));
 		assertTrue(buffer.get(holder));
-		assertEquals("n2", holder.value.titulo);
+		assertTrue(holder.value.contains("<titulo>n2</titulo>"));
 	}
 
 	@Test
 	public void operacionesEnVacio() {
 		assertFalse(buffer.read(holder));
 		assertFalse(buffer.get(holder));
-		assertEquals("", holder.value.titulo);
+		assertEquals("", holder.value);
 	}
 
 	@Test
 	public void fijarLimiteRecortaYShutdown() {
 		buffer.put(noticia("a", "#a"));
 		buffer.put(noticia("b", "#b"));
-		buffer.fijarLimiteNoticias(1);
+		assertTrue(buffer.fijarLimiteNoticias(1));
 		assertEquals(1, buffer.num_elementos());
 		assertTrue(buffer.read(holder));
-		assertEquals("a", holder.value.titulo);
+		assertTrue(holder.value.contains("<titulo>a</titulo>"));
 		buffer.shutdown();
 		assertTrue(buffer.isApagado());
 	}
