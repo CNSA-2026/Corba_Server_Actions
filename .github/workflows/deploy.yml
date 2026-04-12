@@ -45,46 +45,57 @@ jobs:
       - name: Deploy and Start CORBA Server
         run: |
           # Install Java 8 on remote server (if not already installed)
-          ssh ubuntu@${{ secrets.SSH_HOST }} "\
-            if ! command -v /usr/lib/jvm/java-8-openjdk-amd64/bin/java &> /dev/null; then
-              echo 'Installing Java 8...'
-              sudo apt-get update && sudo apt-get install -y openjdk-8-jdk
-            fi"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "sudo apt-get update && sudo apt-get install -y openjdk-8-jdk"
           
           # Transfer the fat JAR to the remote server
           scp target/corba-buffer-server-1.0.0-jar-with-dependencies.jar ubuntu@${{ secrets.SSH_HOST }}:~/corba-server.jar
           
-          # Kill any existing process on port 8080 (Buffer Server)
-          ssh ubuntu@${{ secrets.SSH_HOST }} "fuser -k 8080/tcp || true"
+          # Create startup script on remote server
+          ssh ubuntu@${{ secrets.SSH_HOST }} 'cat > ~/start-corba.sh << '"'"'EOF'"'"'
+          #!/bin/bash
+          set -e
           
-          # Kill any existing orbd process
-          ssh ubuntu@${{ secrets.SSH_HOST }} "pkill orbd || true"
+          JAVA8_HOME=/usr/lib/jvm/java-8-openjdk-amd64
           
-          # Start orbd with Java 8's bin directory
-          ssh ubuntu@${{ secrets.SSH_HOST }} "\
-            export JAVA8_HOME=/usr/lib/jvm/java-8-openjdk-amd64 && \
-            echo \"Starting orbd with JAVA8_HOME: \$JAVA8_HOME\" && \
-            nohup \$JAVA8_HOME/bin/orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &"
+          # Kill any existing processes
+          fuser -k 8080/tcp || true
+          pkill orbd || true
+          sleep 1
           
-          # Wait for orbd to start and verify it's listening
-          ssh ubuntu@${{ secrets.SSH_HOST }} "\
-            for i in {1..15}; do 
-              sleep 1 && \
-              ss -tuln | grep 3000 && break || \
-              echo 'Waiting for orbd on port 3000... attempt '\$i; 
-            done"
+          # Start orbd
+          echo "Starting orbd on port 3000..."
+          nohup $JAVA8_HOME/bin/orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &
           
-          # Check if orbd is actually running
-          ssh ubuntu@${{ secrets.SSH_HOST }} "\
-            ss -tuln | grep 3000 || (echo 'ERROR: orbd failed to start!'; cat /tmp/orbd.log; exit 1)"
+          # Wait for orbd to start
+          for i in {1..15}; do
+            if ss -tuln 2>/dev/null | grep 3000; then
+              echo "orbd is listening on port 3000"
+              break
+            fi
+            echo "Waiting for orbd... attempt $i"
+            sleep 1
+          done
           
-          # Start the CORBA Buffer Server (must use Java 8 for CORBA support)
-          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup /usr/lib/jvm/java-8-openjdk-amd64/bin/java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &"
+          # Verify orbd started
+          if ! ss -tuln 2>/dev/null | grep 3000; then
+            echo "ERROR: orbd failed to start!"
+            cat /tmp/orbd.log
+            exit 1
+          fi
           
-          # Display confirmation
-          echo "✓ CORBA Server deployed and started on ${{ secrets.SSH_HOST }}"
-          echo "✓ Buffer Server listening on port 8080"
-          echo "✓ CORBA Name Service (orbd) running on port 3000"
+          # Start CORBA Buffer Server
+          echo "Starting CORBA Buffer Server..."
+          nohup $JAVA8_HOME/bin/java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &
+          
+          echo "✓ CORBA services started successfully"
+          EOF
+          chmod +x ~/start-corba.sh'
+          
+          # Run the startup script
+          ssh ubuntu@${{ secrets.SSH_HOST }} "~/start-corba.sh"
+          
+          # Verify services are running
+          ssh ubuntu@${{ secrets.SSH_HOST }} "echo '✓ orbd:' && ss -tuln | grep 3000 || echo 'WARNING: orbd not listening' && echo '✓ Processes:' && ps aux | grep -E '(orbd|java.*corba)' | grep -v grep"
 
       # Optional: Display logs from the server
       - name: Display Server Logs
