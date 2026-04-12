@@ -54,7 +54,7 @@ jobs:
           ssh ubuntu@${{ secrets.SSH_HOST }} "pkill orbd || true"
           
           # Start orbd (CORBA Name Service Daemon) in background
-          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup orbd -ORBInitialPort 9000 > /tmp/orbd.log 2>&1 &"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup orbd -ORBInitialPort 80 > /tmp/orbd.log 2>&1 &"
           
           # Wait a moment for orbd to be ready
           sleep 2
@@ -65,7 +65,7 @@ jobs:
           # Display confirmation
           echo "✓ CORBA Server deployed and started on ${{ secrets.SSH_HOST }}"
           echo "✓ ORB listening on port 8080"
-          echo "✓ Name Service running on port 9000"
+          echo "✓ Name Service running on port 80"
 
       # Optional: Display logs from the server
       - name: Display Server Logs
