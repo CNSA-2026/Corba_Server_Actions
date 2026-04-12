@@ -57,8 +57,8 @@
                         <configuration>
                             <!-- Source directory where .idl files are located -->
                             <sourceDirectory>${basedir}</sourceDirectory>
-                            <!-- Output directory for generated Java files -->
-                            <outputDirectory>${project.build.directory}/generated-sources/corba</outputDirectory>
+                            <!-- Output directory: Generate directly to src so Server code finds them -->
+                            <outputDirectory>${basedir}/src</outputDirectory>
                             <!-- Include all .idl files -->
                             <includes>
                                 <include>*.idl</include>
@@ -66,28 +66,6 @@
                             <!-- Generate both client and server side (stubs and skeletons) -->
                             <emitStubs>true</emitStubs>
                             <emitSkeletons>true</emitSkeletons>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Build Helper Maven Plugin: Add generated sources to compilation path -->
-            <!-- MUST run in generate-sources phase to register source root early -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.4.0</version>
-                <executions>
-                    <execution>
-                        <id>add-generated-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${project.build.directory}/generated-sources/corba</source>
-                            </sources>
                         </configuration>
                     </execution>
                 </executions>
@@ -102,11 +80,9 @@
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
-                    <!-- Exclude test files and committed CORBA files from main compilation -->
-                    <!-- Generated CORBA classes will come from target/generated-sources/corba/ (added by build-helper) -->
+                    <!-- Exclude only test files from main compilation -->
                     <excludes>
                         <exclude>Test/**</exclude>
-                        <exclude>BufferApp/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>
