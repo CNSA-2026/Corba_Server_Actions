@@ -50,13 +50,13 @@ jobs:
           name: test-results
           path: target/surefire-reports/*.xml
 
-      # (Optional) Parse and report test results to PR
       - name: Publish Test Results
-        if: success() || failure()
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: dorny/test-reporter@v3.0.0
         with:
-          files: target/surefire-reports/*.xml
-          check_name: JUnit Test Results
+          artifact: test-results
+          name: JUnit Tests
+          path: '*.xml'
+          reporter: java-junit
 
       # (Optional) Create a summary of the build
       - name: Build Summary

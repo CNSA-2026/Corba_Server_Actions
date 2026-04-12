@@ -77,7 +77,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <executable>idlj</executable>
+                            <executable>${java.home}/bin/idlj</executable>
                             <arguments>
                                 <!-- -fall: Generate client and server side (stubs and skeletons) -->
                                 <!-- -td: Target directory for generated files -->
