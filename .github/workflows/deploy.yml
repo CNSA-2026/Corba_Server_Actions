@@ -53,14 +53,23 @@ jobs:
           # Kill any existing orbd process
           ssh ubuntu@${{ secrets.SSH_HOST }} "pkill orbd || true"
           
-          # Start orbd (CORBA Name Service Daemon) in background on port 3000
-          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &"
+          # Find Java 8 installation and start orbd with full path
+          ssh ubuntu@${{ secrets.SSH_HOST }} "\
+            export JAVA_HOME=\$(update-alternatives --query java | grep 'Best' | cut -d' ' -f2 | xargs dirname | xargs dirname) && \
+            echo \"Found JAVA_HOME: \$JAVA_HOME\" && \
+            nohup \$JAVA_HOME/bin/orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &"
           
           # Wait for orbd to start and verify it's listening
-          ssh ubuntu@${{ secrets.SSH_HOST }} "for i in {1..10}; do sleep 1 && netstat -tuln | grep 3000 && break || echo 'Waiting for orbd... attempt '$i; done"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "\
+            for i in {1..15}; do 
+              sleep 1 && \
+              ss -tuln | grep 3000 && break || \
+              echo 'Waiting for orbd on port 3000... attempt '\$i; 
+            done"
           
           # Check if orbd is actually running
-          ssh ubuntu@${{ secrets.SSH_HOST }} "netstat -tuln | grep 3000 || (echo 'ERROR: orbd failed to start!'; cat /tmp/orbd.log; exit 1)"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "\
+            ss -tuln | grep 3000 || (echo 'ERROR: orbd failed to start!'; cat /tmp/orbd.log; exit 1)"
           
           # Start the CORBA Buffer Server
           ssh ubuntu@${{ secrets.SSH_HOST }} "nohup java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &"
