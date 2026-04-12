@@ -1,0 +1,74 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.2
+
+      # Set up Java 8 - CRITICAL: CORBA requires Java 8 (removed from Java 11+)
+      - name: Set up JDK 8
+        uses: actions/setup-java@v5.2.0
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: maven
+
+      # Verify Java version
+      - name: Verify Java Version
+        run: java -version
+
+      # Build with Maven (generate CORBA code, compile, package)
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      # Install SSH Key
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2.8.1
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: 'placeholder'
+
+      # Add host to known_hosts
+      - name: Add Known Hosts
+        run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      # Deploy and Start CORBA Server
+      - name: Deploy and Start CORBA Server
+        run: |
+          # Transfer the fat JAR to the remote server
+          scp target/corba-buffer-server-1.0.0-jar-with-dependencies.jar ubuntu@${{ secrets.SSH_HOST }}:~/corba-server.jar
+          
+          # Kill any existing process on port 8080 (ORB)
+          ssh ubuntu@${{ secrets.SSH_HOST }} "fuser -k 8080/tcp || true"
+          
+          # Kill any existing orbd process
+          ssh ubuntu@${{ secrets.SSH_HOST }} "pkill orbd || true"
+          
+          # Start orbd (CORBA Name Service Daemon) in background
+          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup orbd -ORBInitialPort 9000 > /tmp/orbd.log 2>&1 &"
+          
+          # Wait a moment for orbd to be ready
+          sleep 2
+          
+          # Start the CORBA Buffer Server
+          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &"
+          
+          # Display confirmation
+          echo "✓ CORBA Server deployed and started on ${{ secrets.SSH_HOST }}"
+          echo "✓ ORB listening on port 8080"
+          echo "✓ Name Service running on port 9000"
+
+      # Optional: Display logs from the server
+      - name: Display Server Logs
+        if: always()
+        run: |
+          ssh ubuntu@${{ secrets.SSH_HOST }} "echo '=== CORBA Server Log (last 20 lines) ===' && tail -20 ~/corba-server.log || echo 'No log found yet'"
