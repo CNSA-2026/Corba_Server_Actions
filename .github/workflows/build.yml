@@ -36,22 +36,10 @@ jobs:
       - name: Verify idlj Compiler
         run: which idlj || echo "idlj is included in JDK, will be invoked by Maven"
 
-      # Generate CORBA stubs and skeletons from IDL
-      # This step runs the IDL-to-Java compiler (idlj) on Buffer.idl
-      # Output: target/generated-sources/corba/BufferApp/*.java
-      - name: Generate CORBA Stubs and Skeletons
-        run: mvn generate-sources -X
-        continue-on-error: false
-
-      # Compile the Java project
-      # Includes generated CORBA code and existing source files
-      - name: Compile Project
-        run: mvn clean compile
-        continue-on-error: false
-
-      # Run Unit Tests
-      - name: Run Tests
-        run: mvn test
+      # Build, Compile, and Test in a single Maven command
+      # Phases executed in order: generate-sources (idlj) → compile → test
+      - name: Build with Maven
+        run: mvn clean compile test
         continue-on-error: false
 
       # Upload Test Results (for visibility in PR checks)

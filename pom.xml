@@ -37,9 +37,9 @@
     </dependencies>
 
     <build>
-        <!-- Define source directories for generated and existing code -->
+        <!-- Source and test directories -->
         <sourceDirectory>src</sourceDirectory>
-        <testSourceDirectory>src</testSourceDirectory>
+        <testSourceDirectory>src/Test</testSourceDirectory>
         
         <plugins>
             <!-- Maven Compiler Plugin: Set Java 8 compilation target -->
@@ -113,7 +113,15 @@
                     <includes>
                         <include>**/BufferUnitTest.java</include>
                     </includes>
+                    <!-- Ensure Jupiter provider is used for JUnit 5 -->
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>junit-jupiter-engine</artifactId>
+                        <version>${junit.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
