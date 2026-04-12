@@ -42,20 +42,50 @@
         <testSourceDirectory>src/Test</testSourceDirectory>
         
         <plugins>
-            <!-- Maven Compiler Plugin: Set Java 8 compilation target -->
+            <!-- Build Helper Maven Plugin: Add generated sources to compilation path -->
+            <!-- This must run FIRST in generate-sources phase -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <execution>
+                        <id>add-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/corba</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Ensure output directory exists -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                    <encoding>UTF-8</encoding>
-                </configuration>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.build.directory}/generated-sources/corba" />
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Exec Maven Plugin: Run IDL-to-Java Compiler (idlj) -->
-            <!-- This runs BEFORE compilation in the generate-sources phase -->
+            <!-- This runs in generate-sources phase AFTER directory is created -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -83,25 +113,20 @@
                 </executions>
             </plugin>
 
-            <!-- Build Helper Maven Plugin: Add generated sources to compilation path -->
+            <!-- Maven Compiler Plugin: Set Java 8 compilation target -->
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.4.0</version>
-                <executions>
-                    <execution>
-                        <id>add-generated-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${project.build.directory}/generated-sources/corba</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                    <!-- Exclude test files from main compilation -->
+                    <excludes>
+                        <exclude>Test/**</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
 
             <!-- Maven Surefire Plugin: Run tests (JUnit 5) -->
