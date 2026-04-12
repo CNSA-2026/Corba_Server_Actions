@@ -40,7 +40,6 @@ jobs:
       # Phases executed in order: generate-sources (idlj) → compile → test
       - name: Build with Maven
         run: mvn clean compile test
-        continue-on-error: false
 
       # Upload Test Results (for visibility in PR checks)
       - name: Upload Test Results
