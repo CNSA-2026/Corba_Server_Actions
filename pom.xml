@@ -42,51 +42,30 @@
         <testSourceDirectory>src/Test</testSourceDirectory>
         
         <plugins>
-            <!-- Ensure output directory exists (FIRST) -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <id>mkdir-generated-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <mkdir dir="${project.build.directory}/generated-sources/corba" />
-                            </target>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Exec Maven Plugin: Run IDL-to-Java Compiler (idlj) -->
-            <!-- This runs AFTER directory is created -->
+            <!-- Mojo IDL-to-Java Compiler Plugin: Generate CORBA stubs and skeletons -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
+                <artifactId>idlj-maven-plugin</artifactId>
+                <version>1.2.2</version>
                 <executions>
                     <execution>
                         <id>generate-corba-stubs</id>
                         <phase>generate-sources</phase>
                         <goals>
-                            <goal>exec</goal>
+                            <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <executable>${java.home}/bin/idlj</executable>
-                            <arguments>
-                                <!-- -fall: Generate client and server side (stubs and skeletons) -->
-                                <!-- -td: Target directory for generated files -->
-                                <argument>-fall</argument>
-                                <argument>-td</argument>
-                                <argument>${project.build.directory}/generated-sources/corba</argument>
-                                <argument>Buffer.idl</argument>
-                            </arguments>
-                            <workingDirectory>${basedir}</workingDirectory>
+                            <!-- Source directory where .idl files are located -->
+                            <sourceDirectory>${basedir}</sourceDirectory>
+                            <!-- Output directory for generated Java files -->
+                            <outputDirectory>${project.build.directory}/generated-sources/corba</outputDirectory>
+                            <!-- Include all .idl files -->
+                            <includes>
+                                <include>*.idl</include>
+                            </includes>
+                            <!-- Generate both client and server side (stubs and skeletons) -->
+                            <emitStubs>true</emitStubs>
+                            <emitSkeletons>true</emitSkeletons>
                         </configuration>
                     </execution>
                 </executions>
