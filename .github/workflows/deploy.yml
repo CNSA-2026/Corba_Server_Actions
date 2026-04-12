@@ -44,20 +44,27 @@ jobs:
       # Deploy and Start CORBA Server
       - name: Deploy and Start CORBA Server
         run: |
+          # Install Java 8 on remote server (if not already installed)
+          ssh ubuntu@${{ secrets.SSH_HOST }} "\
+            if ! command -v /usr/lib/jvm/java-8-openjdk-amd64/bin/java &> /dev/null; then
+              echo 'Installing Java 8...'
+              sudo apt-get update && sudo apt-get install -y openjdk-8-jdk
+            fi"
+          
           # Transfer the fat JAR to the remote server
           scp target/corba-buffer-server-1.0.0-jar-with-dependencies.jar ubuntu@${{ secrets.SSH_HOST }}:~/corba-server.jar
           
-          # Kill any existing process on port 8080 (ORB)
+          # Kill any existing process on port 8080 (Buffer Server)
           ssh ubuntu@${{ secrets.SSH_HOST }} "fuser -k 8080/tcp || true"
           
           # Kill any existing orbd process
           ssh ubuntu@${{ secrets.SSH_HOST }} "pkill orbd || true"
           
-          # Find Java 8 installation and start orbd with full path
+          # Start orbd with Java 8's bin directory
           ssh ubuntu@${{ secrets.SSH_HOST }} "\
-            export JAVA_HOME=\$(update-alternatives --query java | grep 'Best' | cut -d' ' -f2 | xargs dirname | xargs dirname) && \
-            echo \"Found JAVA_HOME: \$JAVA_HOME\" && \
-            nohup \$JAVA_HOME/bin/orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &"
+            export JAVA8_HOME=/usr/lib/jvm/java-8-openjdk-amd64 && \
+            echo \"Starting orbd with JAVA8_HOME: \$JAVA8_HOME\" && \
+            nohup \$JAVA8_HOME/bin/orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &"
           
           # Wait for orbd to start and verify it's listening
           ssh ubuntu@${{ secrets.SSH_HOST }} "\
@@ -71,8 +78,8 @@ jobs:
           ssh ubuntu@${{ secrets.SSH_HOST }} "\
             ss -tuln | grep 3000 || (echo 'ERROR: orbd failed to start!'; cat /tmp/orbd.log; exit 1)"
           
-          # Start the CORBA Buffer Server
-          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &"
+          # Start the CORBA Buffer Server (must use Java 8 for CORBA support)
+          ssh ubuntu@${{ secrets.SSH_HOST }} "nohup /usr/lib/jvm/java-8-openjdk-amd64/bin/java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &"
           
           # Display confirmation
           echo "✓ CORBA Server deployed and started on ${{ secrets.SSH_HOST }}"
