@@ -53,19 +53,22 @@ jobs:
           # Kill any existing orbd process
           ssh ubuntu@${{ secrets.SSH_HOST }} "pkill orbd || true"
           
-          # Start orbd (CORBA Name Service Daemon) in background
+          # Start orbd (CORBA Name Service Daemon) in background on port 3000
           ssh ubuntu@${{ secrets.SSH_HOST }} "nohup orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &"
           
-          # Wait a moment for orbd to be ready
-          sleep 2
+          # Wait for orbd to start and verify it's listening
+          ssh ubuntu@${{ secrets.SSH_HOST }} "for i in {1..10}; do sleep 1 && netstat -tuln | grep 3000 && break || echo 'Waiting for orbd... attempt '$i; done"
+          
+          # Check if orbd is actually running
+          ssh ubuntu@${{ secrets.SSH_HOST }} "netstat -tuln | grep 3000 || (echo 'ERROR: orbd failed to start!'; cat /tmp/orbd.log; exit 1)"
           
           # Start the CORBA Buffer Server
           ssh ubuntu@${{ secrets.SSH_HOST }} "nohup java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &"
           
           # Display confirmation
           echo "✓ CORBA Server deployed and started on ${{ secrets.SSH_HOST }}"
-          echo "✓ ORB listening on port 8080"
-          echo "✓ Name Service running on port 3000"
+          echo "✓ Buffer Server listening on port 8080"
+          echo "✓ CORBA Name Service (orbd) running on port 3000"
 
       # Optional: Display logs from the server
       - name: Display Server Logs
