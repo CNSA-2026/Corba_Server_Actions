@@ -63,11 +63,13 @@ jobs:
           pkill orbd || true
           sleep 1
           
-          # Start orbd with public IP advertising
+          # Start orbd with public IP advertising and proxy settings
           echo "Starting orbd on port 3000 (public IP: $PUBLIC_IP)..."
           nohup $JAVA8_HOME/bin/orbd \
             -ORBInitialPort 3000 \
             -ORBInitialHost $PUBLIC_IP \
+            -ORBProxyHost $PUBLIC_IP \
+            -ORBProxyPort 3000 \
             -ORBListenEndpoints "giop:tcp://0.0.0.0:3000" \
             > /tmp/orbd.log 2>&1 &
           
@@ -88,7 +90,7 @@ jobs:
             exit 1
           fi
           
-          # Start CORBA Buffer Server with public IP
+          # Start CORBA Buffer Server with public IP and proxy settings
           echo "Starting CORBA Buffer Server..."
           nohup $JAVA8_HOME/bin/java \
             -Dcom.sun.corba.se.ORBCorbalocResolver.ORBDefaultInitRef="corbaloc::$PUBLIC_IP:3000" \
@@ -96,6 +98,8 @@ jobs:
             -jar ~/corba-server.jar \
             -ORBInitialHost $PUBLIC_IP \
             -ORBInitialPort 3000 \
+            -ORBProxyHost $PUBLIC_IP \
+            -ORBProxyPort 3000 \
             > ~/corba-server.log 2>&1 &
           
           # Wait for Buffer Server to register
