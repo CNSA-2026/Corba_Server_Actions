@@ -83,9 +83,12 @@ jobs:
             exit 1
           fi
           
-          # Start CORBA Buffer Server
+          # Start CORBA Buffer Server with ORB parameters
           echo "Starting CORBA Buffer Server..."
-          nohup $JAVA8_HOME/bin/java -jar ~/corba-server.jar > ~/corba-server.log 2>&1 &
+          nohup $JAVA8_HOME/bin/java -jar ~/corba-server.jar -ORBInitialHost localhost -ORBInitialPort 3000 > ~/corba-server.log 2>&1 &
+          
+          # Wait a moment for Buffer Server to initialize
+          sleep 2
           
           echo "✓ CORBA services started successfully"
           EOF
