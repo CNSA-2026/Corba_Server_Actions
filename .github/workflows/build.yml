@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.2
+
+      # Set up Java 8 - CRITICAL: CORBA requires Java 8 (removed from Java 11+)
+      - name: Set up JDK 8
+        uses: actions/setup-java@v5.2.0
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: maven
+
+      # Verify Java version
+      - name: Verify Java Version
+        run: java -version
+
+      # Verify idlj compiler is available (part of JDK)
+      - name: Verify idlj Compiler
+        run: which idlj || echo "idlj is included in JDK, will be invoked by Maven"
+
+      # Generate CORBA stubs and skeletons from IDL
+      # This step runs the IDL-to-Java compiler (idlj) on Buffer.idl
+      # Output: target/generated-sources/corba/BufferApp/*.java
+      - name: Generate CORBA Stubs and Skeletons
+        run: mvn generate-sources -X
+        continue-on-error: false
+
+      # Compile the Java project
+      # Includes generated CORBA code and existing source files
+      - name: Compile Project
+        run: mvn clean compile
+        continue-on-error: false
+
+      # Run Unit Tests
+      - name: Run Tests
+        run: mvn test
+        continue-on-error: false
+
+      # Upload Test Results (for visibility in PR checks)
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v7
+        if: success() || failure()
+        with:
+          name: test-results
+          path: target/surefire-reports/*.xml
+
+      # (Optional) Parse and report test results to PR
+      - name: Publish Test Results
+        if: success() || failure()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: target/surefire-reports/*.xml
+          check_name: JUnit Test Results
+
+      # (Optional) Create a summary of the build
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "## CORBA Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: $([ $? -eq 0 ] && echo 'Success' || echo 'Failed')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Java Version**: $(java -version 2>&1 | head -1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Generated CORBA Code**: target/generated-sources/corba/BufferApp/" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Report**: target/surefire-reports/" >> $GITHUB_STEP_SUMMARY
