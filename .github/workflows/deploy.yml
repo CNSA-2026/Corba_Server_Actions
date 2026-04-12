@@ -62,9 +62,9 @@ jobs:
           pkill orbd || true
           sleep 1
           
-          # Start orbd
+          # Start orbd with explicit listen endpoints on all interfaces
           echo "Starting orbd on port 3000..."
-          nohup $JAVA8_HOME/bin/orbd -ORBInitialPort 3000 > /tmp/orbd.log 2>&1 &
+          nohup $JAVA8_HOME/bin/orbd -ORBInitialPort 3000 -ORBListenEndpoints "giop:tcp://0.0.0.0:3000" > /tmp/orbd.log 2>&1 &
           
           # Wait for orbd to start
           for i in {1..15}; do
@@ -83,14 +83,15 @@ jobs:
             exit 1
           fi
           
-          # Start CORBA Buffer Server with ORB parameters
+          # Start CORBA Buffer Server with public hostname and ORB parameters
           echo "Starting CORBA Buffer Server..."
-          nohup $JAVA8_HOME/bin/java -jar ~/corba-server.jar -ORBInitialHost localhost -ORBInitialPort 3000 > ~/corba-server.log 2>&1 &
-          
-          # Wait a moment for Buffer Server to initialize
-          sleep 2
-          
-          echo "✓ CORBA services started successfully"
+          nohup $JAVA8_HOME/bin/java \
+            -Dcom.sun.corba.se.ORBCorbalocResolver.ORBDefaultInitRef="corbaloc::webapps.cnsa-2026-dsa069.tech:3000" \
+            -Dcom.sun.corba.se.ORBServerPort=8080 \
+            -jar ~/corba-server.jar \
+            -ORBInitialHost webapps.cnsa-2026-dsa069.tech \
+            -ORBInitialPort 3000 \
+            > ~/corba-server.log 2>&1 &
           EOF
           chmod +x ~/start-corba.sh'
           
