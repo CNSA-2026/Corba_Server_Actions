@@ -56,15 +56,20 @@ jobs:
           set -e
           
           JAVA8_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+          PUBLIC_IP=34.69.229.246
           
           # Kill any existing processes
           fuser -k 8080/tcp || true
           pkill orbd || true
           sleep 1
           
-          # Start orbd with explicit listen endpoints on all interfaces
-          echo "Starting orbd on port 3000..."
-          nohup $JAVA8_HOME/bin/orbd -ORBInitialPort 3000 -ORBListenEndpoints "giop:tcp://0.0.0.0:3000" > /tmp/orbd.log 2>&1 &
+          # Start orbd with public IP advertising
+          echo "Starting orbd on port 3000 (public IP: $PUBLIC_IP)..."
+          nohup $JAVA8_HOME/bin/orbd \
+            -ORBInitialPort 3000 \
+            -ORBInitialHost $PUBLIC_IP \
+            -ORBListenEndpoints "giop:tcp://0.0.0.0:3000" \
+            > /tmp/orbd.log 2>&1 &
           
           # Wait for orbd to start
           for i in {1..15}; do
@@ -83,15 +88,20 @@ jobs:
             exit 1
           fi
           
-          # Start CORBA Buffer Server with public hostname and ORB parameters
+          # Start CORBA Buffer Server with public IP
           echo "Starting CORBA Buffer Server..."
           nohup $JAVA8_HOME/bin/java \
-            -Dcom.sun.corba.se.ORBCorbalocResolver.ORBDefaultInitRef="corbaloc::webapps.cnsa-2026-dsa069.tech:3000" \
+            -Dcom.sun.corba.se.ORBCorbalocResolver.ORBDefaultInitRef="corbaloc::$PUBLIC_IP:3000" \
             -Dcom.sun.corba.se.ORBServerPort=8080 \
             -jar ~/corba-server.jar \
-            -ORBInitialHost webapps.cnsa-2026-dsa069.tech \
+            -ORBInitialHost $PUBLIC_IP \
             -ORBInitialPort 3000 \
             > ~/corba-server.log 2>&1 &
+          
+          # Wait for Buffer Server to register
+          sleep 3
+          
+          echo "✓ CORBA services started successfully"
           EOF
           chmod +x ~/start-corba.sh'
           
