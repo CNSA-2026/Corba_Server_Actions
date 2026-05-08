@@ -1,9 +1,9 @@
 name: Deploy
 
-#on:
-  #push:
-    #branches: [ main ]
-  #workflow_dispatch:
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -59,24 +59,24 @@ jobs:
           PUBLIC_IP=34.69.229.246
           
           # Kill any existing processes
-          fuser -k 8080/tcp || true
+          fuser -k 8081/tcp || true
           pkill orbd || true
           sleep 1
           
           # Start orbd with public IP advertising and proxy settings
-          echo "Starting orbd on port 3000 (public IP: $PUBLIC_IP)..."
+          echo "Starting orbd on port 3001 (public IP: $PUBLIC_IP)..."
           nohup $JAVA8_HOME/bin/orbd \
-            -ORBInitialPort 3000 \
+            -ORBInitialPort 3001 \
             -ORBInitialHost $PUBLIC_IP \
             -ORBProxyHost $PUBLIC_IP \
-            -ORBProxyPort 3000 \
-            -ORBListenEndpoints "giop:tcp://0.0.0.0:3000" \
+            -ORBProxyPort 3001 \
+            -ORBListenEndpoints "giop:tcp://0.0.0.0:3001" \
             > /tmp/orbd.log 2>&1 &
           
           # Wait for orbd to start
           for i in {1..15}; do
-            if ss -tuln 2>/dev/null | grep 3000; then
-              echo "orbd is listening on port 3000"
+            if ss -tuln 2>/dev/null | grep 3001; then
+              echo "orbd is listening on port 3001"
               break
             fi
             echo "Waiting for orbd... attempt $i"
@@ -84,7 +84,7 @@ jobs:
           done
           
           # Verify orbd started
-          if ! ss -tuln 2>/dev/null | grep 3000; then
+          if ! ss -tuln 2>/dev/null | grep 3001; then
             echo "ERROR: orbd failed to start!"
             cat /tmp/orbd.log
             exit 1
@@ -93,13 +93,13 @@ jobs:
           # Start CORBA Buffer Server with public IP and proxy settings
           echo "Starting CORBA Buffer Server..."
           nohup $JAVA8_HOME/bin/java \
-            -Dcom.sun.corba.se.ORBCorbalocResolver.ORBDefaultInitRef="corbaloc::$PUBLIC_IP:3000" \
-            -Dcom.sun.corba.se.ORBServerPort=8080 \
+            -Dcom.sun.corba.se.ORBCorbalocResolver.ORBDefaultInitRef="corbaloc::$PUBLIC_IP:3001" \
+            -Dcom.sun.corba.se.ORBServerPort=8081 \
             -jar ~/corba-server.jar \
             -ORBInitialHost $PUBLIC_IP \
-            -ORBInitialPort 3000 \
+            -ORBInitialPort 3001 \
             -ORBProxyHost $PUBLIC_IP \
-            -ORBProxyPort 3000 \
+            -ORBProxyPort 3001 \
             > ~/corba-server.log 2>&1 &
           
           # Wait for Buffer Server to register
@@ -113,10 +113,12 @@ jobs:
           ssh ubuntu@${{ secrets.SSH_HOST }} "~/start-corba.sh"
           
           # Verify services are running
-          ssh ubuntu@${{ secrets.SSH_HOST }} "echo '✓ orbd:' && ss -tuln | grep 3000 || echo 'WARNING: orbd not listening' && echo '✓ Processes:' && ps aux | grep -E '(orbd|java.*corba)' | grep -v grep"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "echo '✓ orbd:' && ss -tuln | grep 3001 || echo 'WARNING: orbd not listening' && echo '✓ Processes:' && ps aux | grep -E '(orbd|java.*corba)' | grep -v grep"
 
       # Optional: Display logs from the server
       - name: Display Server Logs
         if: always()
         run: |
-          ssh ubuntu@${{ secrets.SSH_HOST }} "echo '=== CORBA Server Log (last 20 lines) ===' && tail -20 ~/corba-server.log || echo 'No log found yet'"
+          echo "### CORBA Server Log" >> "$GITHUB_STEP_SUMMARY"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "tail -20 ~/corba-server.log || echo 'No log found yet'" >> "$GITHUB_STEP_SUMMARY"
+          echo "(Logs appended to GitHub Actions job summary)" >> "$GITHUB_STEP_SUMMARY"

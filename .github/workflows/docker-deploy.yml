@@ -117,9 +117,13 @@ jobs:
             echo "✓ Despliegue completado con éxito"
           '
 
-      # Optional: Display logs from the containers
-      - name: Display Server Logs
+      # Optional: Display logs from the containers and append to GitHub job summary
+      - name: Display Server Logs (append to GitHub summary)
         if: always()
         run: |
-          ssh ubuntu@${{ secrets.SSH_HOST }} "echo '=== ORBD (last 20 lines) ===' && docker logs --tail 20 corba-orbd || echo 'No ORBD logs'"
-          ssh ubuntu@${{ secrets.SSH_HOST }} "echo '=== CORBA Server (last 20 lines) ===' && docker logs --tail 20 corba-buffer || echo 'No server logs'"
+          echo "### ORBD (last 20 lines)" >> "$GITHUB_STEP_SUMMARY"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "docker logs --tail 20 corba-orbd || echo 'No ORBD logs'" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### CORBA Server (last 20 lines)" >> "$GITHUB_STEP_SUMMARY"
+          ssh ubuntu@${{ secrets.SSH_HOST }} "docker logs --tail 20 corba-buffer || echo 'No server logs'" >> "$GITHUB_STEP_SUMMARY"
+          echo "(Logs appended to GitHub Actions job summary)" >> "$GITHUB_STEP_SUMMARY"
