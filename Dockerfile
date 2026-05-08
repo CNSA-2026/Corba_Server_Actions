@@ -20,14 +20,17 @@ RUN mvn -B -f ./pom.xml -s /usr/share/maven/ref/settings-docker.xml clean packag
 
 # Start with a base image containing Java 8 runtime
 FROM eclipse-temurin:8-jre
-# Expone el puerto típico de CORBA, puedes cambiarlo si tu servidor usa otro
-EXPOSE 1050
+# Expone el puerto típico de CORBA
+EXPOSE 1050 3000
 # Copia los archivos compilados
 COPY --from=build /app/target/classes/ /app/classes/
-COPY --from=build /app/target/idl/ /app/idl/
-# Copia recursos si los hay
-COPY --from=build /app/target/resources/ /app/resources/
+# Copia el JAR con dependencias para que esté disponible si se necesita
+COPY --from=build /app/target/corba-buffer-server-1.0.0-jar-with-dependencies.jar /app/corba-server.jar
 # Establece el directorio de trabajo
 WORKDIR /app
-# Ejecuta el servidor CORBA principal (ajusta el nombre de la clase si es necesario)
-ENTRYPOINT ["java", "-cp", "/app/classes:/app/idl:/app/resources", "Server.BufferServer"]
+# Script para ejecutar el servidor CORBA con argumentos ORB
+RUN echo '#!/bin/sh' > /app/start-server.sh && \
+    echo 'exec java -cp /app/classes:/app/corba-server.jar Server.BufferServer "$@"' >> /app/start-server.sh && \
+    chmod +x /app/start-server.sh
+# Ejecuta el servidor CORBA
+ENTRYPOINT ["/app/start-server.sh"]
