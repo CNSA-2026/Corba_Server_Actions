@@ -63,32 +63,42 @@ jobs:
       - name: Add Known Hosts
         run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      # Deploy and Start CORBA Server (Docker)
+      # Deploy and Start CORBA Server
       - name: Deploy and Start CORBA Server
         run: |
+          # 1. Guardar la clave JSON en un archivo seguro en el runner de GitHub
+          echo '${{ secrets.GCP_SA_KEY }}' > gcp_key.json
+
+          # 2. Transferir el archivo de la clave a tu Máquina Virtual de forma segura
+          scp -o StrictHostKeyChecking=no gcp_key.json ubuntu@${{ secrets.SSH_HOST }}:/tmp/gcp_key.json
+
+          # 3. Conectarse por SSH y ejecutar el despliegue
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.SSH_HOST }} '
             set -e
 
-            # 1. Login en Google Artifact Registry dentro de la MV
-            echo "${{ secrets.GCP_SA_KEY }}" | docker login -u _json_key --password-stdin us-east1-docker.pkg.dev
+            # Hacer login en Docker leyendo el archivo intacto (esto evita el error de formato)
+            cat /tmp/gcp_key.json | docker login -u _json_key --password-stdin us-east1-docker.pkg.dev
 
-            # 2. Definir variables
+            # Borrar la clave de la MV por seguridad
+            rm /tmp/gcp_key.json
+
+            # Definir variables
             PUBLIC_IP=34.69.229.246
             ORB_PORT=3000
             SERVER_PORT=8080
             IMAGE_NAME=${{ secrets.IMAGE_NAME }}
 
-            # 3. Limpieza (sin errores si no existen)
+            # Limpieza previa
             docker stop corba-orbd corba-buffer >/dev/null 2>&1 || true
             docker rm -f corba-orbd corba-buffer >/dev/null 2>&1 || true
 
-            # 4. Pull de la imagen (más seguro que el .tar)
+            # Pull de la nueva imagen
             docker pull $IMAGE_NAME
 
-            # 5. Crear red
+            # Crear red si no existe
             docker network create corba-net >/dev/null 2>&1 || true
 
-            # 6. Levantar Naming Service (ORBD)
+            # Levantar Naming Service (ORBD)
             echo "Starting ORBD..."
             docker run -d --name corba-orbd --network corba-net -p ${ORB_PORT}:${ORB_PORT} \
               eclipse-temurin:8-jdk \
@@ -96,7 +106,7 @@ jobs:
 
             sleep 5
 
-            # 7. Levantar Servidor CORBA
+            # Levantar Servidor CORBA
             echo "Starting CORBA Buffer Server..."
             docker run -d --name corba-buffer --network corba-net -p ${SERVER_PORT}:${SERVER_PORT} \
               -e JAVA_TOOL_OPTIONS="-Dcom.sun.corba.se.ORBServerHost=${PUBLIC_IP} -Dcom.sun.corba.se.ORBServerPort=${SERVER_PORT}" \
