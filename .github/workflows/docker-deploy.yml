@@ -64,44 +64,47 @@ jobs:
         run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
       # Deploy and Start CORBA Server (Docker)
-      - name: Deploy and Start CORBA Server (Docker)
+      - name: Deploy and Start CORBA Server
         run: |
-          ssh ubuntu@${{ secrets.SSH_HOST }} '
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.SSH_HOST }} '
             set -e
 
+            # 1. Login en Google Artifact Registry dentro de la MV
+            echo "${{ secrets.GCP_SA_KEY }}" | docker login -u _json_key --password-stdin us-east1-docker.pkg.dev
+
+            # 2. Definir variables
             PUBLIC_IP=34.69.229.246
             ORB_PORT=3000
             SERVER_PORT=8080
             IMAGE_NAME=${{ secrets.IMAGE_NAME }}
 
-            # Create network if it does not exist
-            docker network create corba-net >/dev/null 2>&1 || true
+            # 3. Limpieza (sin errores si no existen)
+            docker stop corba-orbd corba-buffer >/dev/null 2>&1 || true
+            docker rm -f corba-orbd corba-buffer >/dev/null 2>&1 || true
 
-            # Stop and remove previous containers
-            docker stop corba-orbd corba-buffer || true
-            docker rm -f corba-orbd corba-buffer || true
-
-            # Login to Artifact Registry (if needed)
-            if ! docker info | grep -q us-east1-docker.pkg.dev; then
-              echo "${{ secrets.GCP_SA_KEY }}" | docker login -u _json_key --password-stdin us-east1-docker.pkg.dev
-            fi
-
-            # Pull latest image
+            # 4. Pull de la imagen (más seguro que el .tar)
             docker pull $IMAGE_NAME
 
-            # Start ORBD (Naming Service)
+            # 5. Crear red
+            docker network create corba-net >/dev/null 2>&1 || true
+
+            # 6. Levantar Naming Service (ORBD)
+            echo "Starting ORBD..."
             docker run -d --name corba-orbd --network corba-net -p ${ORB_PORT}:${ORB_PORT} \
               eclipse-temurin:8-jdk \
-              orbd -ORBInitialPort ${ORB_PORT} -ORBInitialHost 0.0.0.0 -ORBListenEndpoints "giop:tcp://0.0.0.0:${ORB_PORT}"
+              orbd -ORBInitialPort ${ORB_PORT} -ORBInitialHost 0.0.0.0
 
-            # Start CORBA Buffer Server
+            sleep 5
+
+            # 7. Levantar Servidor CORBA
+            echo "Starting CORBA Buffer Server..."
             docker run -d --name corba-buffer --network corba-net -p ${SERVER_PORT}:${SERVER_PORT} \
               -e JAVA_TOOL_OPTIONS="-Dcom.sun.corba.se.ORBServerHost=${PUBLIC_IP} -Dcom.sun.corba.se.ORBServerPort=${SERVER_PORT}" \
               $IMAGE_NAME \
               -ORBInitialHost corba-orbd \
-              -ORBInitialPort ${ORB_PORT} \
-              -ORBProxyHost ${PUBLIC_IP} \
-              -ORBProxyPort ${ORB_PORT}
+              -ORBInitialPort ${ORB_PORT}
+            
+            echo "✓ Despliegue completado con éxito"
           '
 
       # Optional: Display logs from the containers
