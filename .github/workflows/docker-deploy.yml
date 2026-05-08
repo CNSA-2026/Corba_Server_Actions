@@ -1,4 +1,4 @@
-name: Deploy
+name: Docker-Deploy
 
 on:
   push:
@@ -31,6 +31,18 @@ jobs:
       # Build with Maven (generate CORBA code, compile, package)
       - name: Build with Maven
         run: mvn clean package -DskipTests
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Docker login to Artifact Registry
+        uses: docker/login-action@v4.1.0
+        with:
+          registry: us-east1-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GCP_SA_KEY }}
 
       - name: Build Docker image
         run: |
